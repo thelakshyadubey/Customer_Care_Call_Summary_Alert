@@ -16,6 +16,10 @@ def main():
         for uploaded_file in uploaded_files:
             file_name = uploaded_file.name
 
+            if uploaded_file.size > 5 * 1024 * 1024:
+                st.warning(f"{file_name} is too large. Please upload files under 5MB.")
+                continue
+
             col1, col2, col3 = st.columns([0.1, 1, 2])
             with col1:
                 st.write("-")
@@ -23,7 +27,8 @@ def main():
                 st.write(file_name)
             with col3:
                 if st.button(f"Send Email for {file_name}"):
-                    email_summary(uploaded_file)
+                    with st.spinner("Processing..."):
+                        email_summary(uploaded_file)
                     st.success(f"Email sent for: {file_name}")
 
 if __name__ == "__main__":
