@@ -54,3 +54,8 @@ Agent Chain ->	LangChain
 
 🧠 Author
 Lakshya Dubey
+
+PREVIEW
+![image](https://github.com/user-attachments/assets/83f4cc63-f1ca-4491-9595-d2c9c5536e55)
+![image](https://github.com/user-attachments/assets/e63feecd-ce0f-455d-b29d-028179c5049e)
+
