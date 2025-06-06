@@ -1,33 +1,59 @@
 import os
 import tempfile
+import requests
 from dotenv import load_dotenv
-from faster_whisper import WhisperModel
 from langchain_groq import ChatGroq
 from langchain.agents import AgentType, initialize_agent
 from langchain.tools import Tool
 from langchain_community.utilities.zapier import ZapierNLAWrapper
-import streamlit as st
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
-# Cache the model to avoid reloading
-@st.cache_resource
-def load_model():
-    return WhisperModel("tiny", compute_type="int8")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+ZAPIER_KEY = os.getenv("ZAPIER_NLA_API_KEY")
+ASSEMBLYAI_KEY = os.getenv("ASSEMBLYAI_API_KEY")
+
+headers = {
+    "authorization": ASSEMBLYAI_KEY,
+    "content-type": "application/json"
+}
+
+upload_endpoint = "https://api.assemblyai.com/v2/upload"
+transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
+
+
+def transcribe_audio(file_path):
+    # Upload file to AssemblyAI
+    with open(file_path, 'rb') as f:
+        upload_response = requests.post(upload_endpoint, headers=headers, files={'file': f})
+    audio_url = upload_response.json()['upload_url']
+
+    # Request transcription
+    transcript_request = {"audio_url": audio_url}
+    response = requests.post(transcript_endpoint, json=transcript_request, headers=headers)
+    transcript_id = response.json()['id']
+
+    # Poll for completion
+    status = 'processing'
+    while status not in ('completed', 'error'):
+        poll_response = requests.get(f"{transcript_endpoint}/{transcript_id}", headers=headers)
+        status = poll_response.json()['status']
+
+    if status == 'completed':
+        return poll_response.json()['text']
+    else:
+        raise Exception("Transcription failed")
+
 
 def email_summary(uploaded_file):
-    # Save uploaded .mp3 to a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
         temp_audio.write(uploaded_file.getbuffer())
         temp_audio_path = temp_audio.name
 
-    # Transcribe using faster-whisper
-    model = load_model()
-    segments, _ = model.transcribe(temp_audio_path)
-    transcription = " ".join([seg.text for seg in segments])
+    transcription = transcribe_audio(temp_audio_path)
 
-    # Initialize ChatGroq LLM and Zapier tool
+    # Initialize LLM and Zapier tool
     llm = ChatGroq(model_name="llama3-8b-8192", temperature=0)
     zapier = ZapierNLAWrapper()
 
@@ -45,7 +71,6 @@ def email_summary(uploaded_file):
         description="Send an email using Gmail via Zapier"
     )
 
-    # Create the agent
     agent = initialize_agent(
         tools=[gmail_send_email_tool],
         llm=llm,
@@ -53,13 +78,10 @@ def email_summary(uploaded_file):
         verbose=True,
     )
 
-    # Summarization prompt
     prompt = (
         f"Use the Gmail: Send Email Zapier action to send an email to lakshya.dubey04@gmail.com "
-        f"summarizing the following text:\n\n{transcription}"
+        f"summarizing the following customer call transcription:\n\n{transcription}"
     )
 
     agent.run(prompt)
-
-    # Cleanup
     os.remove(temp_audio_path)
