@@ -1,32 +1,33 @@
 import os
 import tempfile
-import whisper
 from dotenv import load_dotenv
+from faster_whisper import WhisperModel
 from langchain_groq import ChatGroq
 from langchain.agents import AgentType, initialize_agent
 from langchain.tools import Tool
 from langchain_community.utilities.zapier import ZapierNLAWrapper
 import streamlit as st
 
-# Load environment variables
+# Load environment variables from .env
 load_dotenv()
 
+# Cache the model to avoid reloading
 @st.cache_resource
 def load_model():
-    return whisper.load_model("tiny")
+    return WhisperModel("tiny", compute_type="int8")
 
 def email_summary(uploaded_file):
-    # Save to temp file
+    # Save uploaded .mp3 to a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
         temp_audio.write(uploaded_file.getbuffer())
         temp_audio_path = temp_audio.name
 
-    # Transcription
+    # Transcribe using faster-whisper
     model = load_model()
-    result = model.transcribe(temp_audio_path)
-    transcription = result["text"]
+    segments, _ = model.transcribe(temp_audio_path)
+    transcription = " ".join([seg.text for seg in segments])
 
-    # LLM and Zapier setup
+    # Initialize ChatGroq LLM and Zapier tool
     llm = ChatGroq(model_name="llama3-8b-8192", temperature=0)
     zapier = ZapierNLAWrapper()
 
@@ -44,6 +45,7 @@ def email_summary(uploaded_file):
         description="Send an email using Gmail via Zapier"
     )
 
+    # Create the agent
     agent = initialize_agent(
         tools=[gmail_send_email_tool],
         llm=llm,
@@ -51,7 +53,7 @@ def email_summary(uploaded_file):
         verbose=True,
     )
 
-    # Run agent
+    # Summarization prompt
     prompt = (
         f"Use the Gmail: Send Email Zapier action to send an email to lakshya.dubey04@gmail.com "
         f"summarizing the following text:\n\n{transcription}"
@@ -59,4 +61,5 @@ def email_summary(uploaded_file):
 
     agent.run(prompt)
 
+    # Cleanup
     os.remove(temp_audio_path)
