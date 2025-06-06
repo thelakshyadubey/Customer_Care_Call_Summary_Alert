@@ -3,4 +3,4 @@ langchain==0.3.25
 langchain_community==0.3.24
 langchain_groq==0.3.2
 python-dotenv>=1.0.0
-faster-whisper==0.10.0
+requests>=2.31.0
