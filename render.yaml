@@ -1,6 +1,13 @@
 services:
   - type: web
-    name: Customer_Call_Summary_Alert
+    name: customer-call-summarizer
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run app.py --server.port $PORT --server.headless true
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "streamlit run app.py --server.port $PORT --server.headless true"
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ZAPIER_NLA_API_KEY
+        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
