@@ -1,0 +1,6 @@
+langchain==0.3.25
+langchain_community==0.3.24
+langchain_groq==0.3.2
+openai_whisper==20231117
+streamlit==1.29.0
+whisper==1.1.10
