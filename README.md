@@ -1,5 +1,5 @@
 # Customer_Care_Call_Summary_Alert
-Project Deployed on Render: https://customer-care-call-summary-alert.onrender.com/
+Project Deployed on Render: https://customer-care-call-summary-alert.onrender.com
 📞 Customer Call Summary & Email Bot
 This is a Streamlit-based AI assistant that takes in customer support call recordings (audio files), transcribes them using AssemblyAI, summarizes the conversation using GROQ's LLaMA-3 via LangChain, and sends the summary via Zapier Gmail Integration — all with a single upload!
 
