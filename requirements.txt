@@ -4,3 +4,4 @@ langchain_groq==0.3.2
 openai_whisper==20231117
 streamlit==1.29.0
 whisper==1.1.10
+python-dotenv>=1.0.0
