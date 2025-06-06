@@ -1,31 +1,35 @@
 import os
 import tempfile
 import whisper
-from dotenv import load_dotenv  # Load .env file
+from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain.agents import AgentType, initialize_agent
 from langchain.tools import Tool
 from langchain_community.utilities.zapier import ZapierNLAWrapper
+import streamlit as st
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
+@st.cache_resource
+def load_model():
+    return whisper.load_model("tiny")
+
 def email_summary(uploaded_file):
-    # Save uploaded file to a temporary location
+    # Save to temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
         temp_audio.write(uploaded_file.getbuffer())
         temp_audio_path = temp_audio.name
 
-    # Transcribe audio using Whisper
-    model = whisper.load_model("base")
+    # Transcription
+    model = load_model()
     result = model.transcribe(temp_audio_path)
     transcription = result["text"]
 
-    # Initialize LLM and Zapier tool
+    # LLM and Zapier setup
     llm = ChatGroq(model_name="llama3-8b-8192", temperature=0)
     zapier = ZapierNLAWrapper()
 
-    # Define the Gmail sending tool
     gmail_send_email_tool = Tool(
         name="GmailSendEmail",
         func=lambda instructions: zapier.run(
@@ -40,7 +44,6 @@ def email_summary(uploaded_file):
         description="Send an email using Gmail via Zapier"
     )
 
-    # Initialize the agent
     agent = initialize_agent(
         tools=[gmail_send_email_tool],
         llm=llm,
@@ -48,7 +51,7 @@ def email_summary(uploaded_file):
         verbose=True,
     )
 
-    # Run the agent with a prompt
+    # Run agent
     prompt = (
         f"Use the Gmail: Send Email Zapier action to send an email to lakshya.dubey04@gmail.com "
         f"summarizing the following text:\n\n{transcription}"
@@ -56,5 +59,4 @@ def email_summary(uploaded_file):
 
     agent.run(prompt)
 
-    # Clean up the temporary audio file
     os.remove(temp_audio_path)
